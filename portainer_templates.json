@@ -1,0 +1,190 @@
+{
+  "version": "2",
+  "templates": [
+    {
+      "type": 1,
+      "title": "Portainer",
+      "description": "Portainer UI for Docker management",
+      "platform": "linux",
+      "logo": "",
+      "image": "portainer/portainer-ee:latest",
+      "restart_policy": "unless-stopped",
+      "ports": [
+        {
+          "container": 9443,
+          "host": 9443
+        }
+      ],
+      "volumes": [
+        "/var/run/docker.sock:/var/run/docker.sock",
+        "/mnt/appdata/portainer:/data",
+        "/etc/localtime:/etc/localtime:ro"
+      ]
+    },
+    {
+      "type": 1,
+      "title": "Homepage",
+      "description": "A modern dashboard for your homelab",
+      "platform": "linux",
+      "logo": "",
+      "image": "ghcr.io/gethomepage/homepage:latest",
+      "restart_policy": "unless-stopped",
+      "env": [
+        {
+          "name": "HOMEPAGE_ALLOWED_HOSTS",
+          "label": "HOMEPAGE_ALLOWED_HOSTS",
+          "default": "home.hmsc.ro,192.168.11.2:3333"
+        }
+      ],
+      "ports": [
+        {
+          "container": 3000,
+          "host": 3333
+        }
+      ],
+      "volumes": [
+        "${APPDIR}/homepage:/app/config",
+        "/var/run/docker.sock:/var/run/docker.sock",
+        "/mnt/data:/data",
+        "/home/cloud:/os"
+      ]
+    },
+    {
+      "type": 1,
+      "title": "Prowlarr",
+      "description": "Indexer manager/proxy for Sonarr, Radarr, Lidarr",
+      "platform": "linux",
+      "logo": "",
+      "image": "lscr.io/linuxserver/prowlarr:latest",
+      "restart_policy": "unless-stopped",
+      "ports": [
+        {
+          "container": 9696,
+          "host": 9696
+        }
+      ],
+      "volumes": [
+        "${APPDIR}/prowlarr/:/config"
+      ]
+    },
+    {
+      "type": 1,
+      "title": "qBittorrent",
+      "description": "qBittorrent client with Web UI",
+      "platform": "linux",
+      "logo": "",
+      "image": "linuxserver/qbittorrent",
+      "restart_policy": "unless-stopped",
+      "ports": [
+        {
+          "container": 8080,
+          "host": 8080
+        },
+        {
+          "container": 6881,
+          "host": 6881
+        },
+        {
+          "container": 6881,
+          "host": 6881
+        }
+      ],
+      "volumes": [
+        "${APPDIR}/qbittorrent:/config",
+        "${USERDIR}/downloads:/downloads"
+      ]
+    },
+    {
+      "type": 1,
+      "title": "Bazarr",
+      "description": "Subtitle management for Radarr and Sonarr",
+      "platform": "linux",
+      "logo": "",
+      "image": "hotio/bazarr:latest",
+      "restart_policy": "unless-stopped",
+      "ports": [
+        {
+          "container": 6767,
+          "host": 6767
+        }
+      ],
+      "volumes": [
+        "${APPDIR}/bazarr:/config",
+        "${USERDIR}/media:/media"
+      ]
+    },
+    {
+      "type": 1,
+      "title": "Scrutiny",
+      "description": "Hard drive health monitoring",
+      "platform": "linux",
+      "logo": "",
+      "image": "ghcr.io/analogj/scrutiny:master-omnibus",
+      "restart_policy": "unless-stopped",
+      "ports": [
+        {
+          "container": 8080,
+          "host": 8082
+        },
+        {
+          "container": 8086,
+          "host": 8086
+        }
+      ],
+      "volumes": [
+        "/run/udev:/run/udev:ro",
+        "${APPDIR}/scrutiny:/opt/scrutiny/config",
+        "${APPDIR}/scrutiny/db:/opt/scrutiny/influxdb"
+      ]
+    },
+    {
+      "type": 1,
+      "title": "Uptime Kuma",
+      "description": "Self-hosted monitoring tool like Uptime Robot",
+      "platform": "linux",
+      "logo": "",
+      "image": "louislam/uptime-kuma:1",
+      "restart_policy": "unless-stopped",
+      "ports": [
+        {
+          "container": 3001,
+          "host": 3201
+        }
+      ],
+      "volumes": [
+        "${APPDIR}/uptime:/app/data",
+        "/var/run/docker.sock:/var/run/docker.sock"
+      ]
+    },
+    {
+      "type": 1,
+      "title": "Vaultwarden",
+      "description": "Bitwarden-compatible password manager",
+      "platform": "linux",
+      "logo": "",
+      "image": "vaultwarden/server:latest",
+      "restart_policy": "unless-stopped",
+      "ports": [
+        {
+          "container": 80,
+          "host": 280
+        }
+      ],
+      "volumes": [
+        "${APPDIR}/vaultwarden:/data"
+      ]
+    },
+    {
+      "type": 1,
+      "title": "Homebridge",
+      "description": "HomeKit support for smart home devices",
+      "platform": "linux",
+      "logo": "",
+      "image": "homebridge/homebridge:latest",
+      "restart_policy": "unless-stopped",
+      "volumes": [
+        "${APPDIR}/homebridge:/homebridge"
+      ]
+    }
+  ]
+}
