@@ -10,7 +10,7 @@
     "url": "https://github.com/romeolazar/templates"
   },
   "templateVersion": "1.0",
-  "stackfile": "https://raw.githubusercontent.com/romeolazar/templates/main/docker-compose.yml",
+  "stackfile": "https://raw.githubusercontent.com/romeolazar/templates/main/stacks/media/docker-compose.yml",
   "env": [
     { "name": "PUID", "label": "PUID (e.g. 1000)", "default": "1000" },
     { "name": "PGID", "label": "PGID (e.g. 1000)", "default": "1000" },
