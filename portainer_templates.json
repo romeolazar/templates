@@ -1,30 +1,33 @@
 {
-  "type": 3,
-  "title": "Media Stack (Jellyfin + *arr + qBittorrent + Plex)",
-  "description": "All-in-one media stack: Jellyfin, Jellyseerr, Jellystat (+ Postgres), Prowlarr, FlareSolverr, qBittorrent, Bazarr, Radarr, Sonarr, Lidarr, Plex.",
-  "note": "Uses network_mode=host for Jellyfin and Plex. Ensure ports do not conflict on the host. Requires env vars (PUID/PGID/TZ/etc).",
-  "categories": ["Media"],
-  "platform": "linux",
-  "logo": "https://raw.githubusercontent.com/romeolazar/templates/main/icons/media.png",
-  "repository": {
-    "url": "https://github.com/romeolazar/templates"
-  },
-  "templateVersion": "1.0",
-  "stackfile": "https://raw.githubusercontent.com/romeolazar/templates/main/stacks/media/docker-compose.yml",
-  "env": [
-    { "name": "PUID", "label": "PUID (e.g. 1000)", "default": "1000" },
-    { "name": "PGID", "label": "PGID (e.g. 1000)", "default": "1000" },
-    { "name": "TZ", "label": "Timezone (e.g. Europe/Bucharest)", "default": "Europe/Bucharest" },
+  "version": "3",
+  "templates": [
+    {
+      "id": 1,
+      "type": 3,
+      "title": "Media Stack (Jellyfin + Arr + Plex)",
+      "name": "media-stack",
+      "description": "Deploys Jellyfin, Jellyseerr, Jellystat (+ Postgres), Prowlarr, FlareSolverr, qBittorrent, Bazarr, Radarr, Sonarr, Lidarr, and Plex using your docker-compose.yml.",
+      "note": "This template deploys a Compose stack from your GitHub repo. Ensure the host paths you provide (APPDIR, MEDIADIR, etc.) exist and that /dev/dri is available for hardware acceleration.",
+      "categories": ["Media", "Downloaders", "Automation"],
+      "platform": "linux",
+      "logo": "https://raw.githubusercontent.com/jellyfin/jellyfin-ux/master/branding/SVG/icon-transparent.svg",
+      "stackfile": "https://raw.githubusercontent.com/romeolazar/templates/main/docker-compose.yml",
+      "env": [
+        { "name": "PUID", "label": "PUID", "default": "1000" },
+        { "name": "PGID", "label": "PGID", "default": "1000" },
+        { "name": "TZ", "label": "Timezone (TZ)", "default": "Europe/Bucharest" },
 
-    { "name": "APPDIR", "label": "App config base dir (e.g. /opt/appdata)", "default": "/opt/appdata" },
-    { "name": "MEDIADIR", "label": "Media dir (e.g. /tank/media)", "default": "/tank" },
-    { "name": "VIDEOSDIR", "label": "Videos dir (optional, e.g. /tank/videos)", "default": "/videos" },
-    { "name": "DOWNLOADDIR", "label": "Downloads dir (e.g. /tank/downloads)", "default": "/downloads" },
+        { "name": "APPDIR", "label": "App data base path (APPDIR)", "default": "/opt/appdata" },
+        { "name": "MEDIADIR", "label": "Media path (MEDIADIR)", "default": "/tank/media" },
+        { "name": "VIDEOSDIR", "label": "Videos path (VIDEOSDIR)", "default": "/tank/videos" },
+        { "name": "DOWNLOADDIR", "label": "Downloads path (DOWNLOADDIR)", "default": "/tank/downloads" },
 
-    { "name": "PLEX_CLAIM", "label": "Plex claim token (optional)", "default": "" },
+        { "name": "JELLYSTAT_POSTGRES_USER", "label": "Jellystat Postgres user", "default": "jellystat" },
+        { "name": "JELLYSTAT_POSTGRES_PASSWORD", "label": "Jellystat Postgres password", "default": "" },
+        { "name": "JELLYSTAT_JWT_SECRET", "label": "Jellystat JWT secret", "default": "" },
 
-    { "name": "JELLYSTAT_POSTGRES_USER", "label": "Jellystat Postgres user", "default": "jellystat" },
-    { "name": "JELLYSTAT_POSTGRES_PASSWORD", "label": "Jellystat Postgres password", "default": "change_me" },
-    { "name": "JELLYSTAT_JWT_SECRET", "label": "Jellystat JWT secret", "default": "change_me_to_a_long_random_string" }
+        { "name": "PLEX_CLAIM", "label": "Plex claim token (optional)", "default": "" }
+      ]
+    }
   ]
 }
