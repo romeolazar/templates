@@ -1,0 +1,191 @@
+services:
+
+  jellyfin:
+    image: jellyfin/jellyfin
+    container_name: jellyfin
+    environment:
+      - PUID=${PUID}
+      - PGID=${PGID}
+      - TZ=${TZ}
+    network_mode: host
+    volumes:
+      - ${APPDIR}/jellyfin/config:/config:rw
+      - ${APPDIR}/jellyfin/cache:/cache:rw
+      - /dev/shm:/transcode:rw
+      - ${MEDIADIR}:/tank
+      - ${VIDEOSDIR}:/videos
+    devices:
+      - /dev/dri:/dev/dri
+    restart: unless-stopped
+
+  jellyseerr:
+    image: ghcr.io/fallenbagel/jellyseerr:latest
+    init: true
+    container_name: jellyseerr
+    environment:
+      - LOG_LEVEL=debug
+      - TZ=${TZ}
+    ports:
+      - 5055:5055
+    volumes:
+      - ${APPDIR}/jellyseerr/config:/app/config
+    restart: unless-stopped
+
+  jellystat:
+    image: cyfershepard/jellystat:latest
+    container_name: jellystat
+    restart: unless-stopped
+    logging:
+      driver: "json-file"
+      options:
+        max-file: "5"
+        max-size: "10m"
+    environment:
+      POSTGRES_USER: ${JELLYSTAT_POSTGRES_USER}
+      POSTGRES_PASSWORD: ${JELLYSTAT_POSTGRES_PASSWORD}
+      POSTGRES_IP: jellystat-db
+      POSTGRES_PORT: 5432
+      JWT_SECRET: ${JELLYSTAT_JWT_SECRET}
+      TZ: ${TZ}
+    volumes:
+      - ${APPDIR}/jellystat/backup-data:/app/backend/backup-data
+    ports:
+      - "3011:3000"
+    depends_on:
+      - jellystat-db
+
+  jellystat-db:
+    image: postgres:15.14
+    shm_size: '1gb'
+    container_name: jellystat-db
+    restart: unless-stopped
+    logging:
+      driver: "json-file"
+      options:
+        max-file: "5"
+        max-size: "10m"
+    environment:
+      POSTGRES_USER: ${JELLYSTAT_POSTGRES_USER}
+      POSTGRES_PASSWORD: ${JELLYSTAT_POSTGRES_PASSWORD}
+    volumes:
+      - ${APPDIR}/jellystat/postgres-data:/var/lib/postgresql/data
+
+  prowlarr:
+    image: lscr.io/linuxserver/prowlarr:latest
+    container_name: prowlarr
+    environment:
+      - PUID=${PUID}
+      - PGID=${PGID}
+      - TZ=${TZ}
+    volumes:
+      - ${APPDIR}/prowlarr:/config
+    ports:
+      - 9696:9696
+    restart: unless-stopped
+
+  flaresolverr:
+    image: ghcr.io/flaresolverr/flaresolverr:latest
+    container_name: flaresolverr
+    dns:
+      - 1.1.1.1
+      - 8.8.8.8
+    environment:
+      - PUID=${PUID}
+      - PGID=${PGID}
+      - TZ=${TZ}
+      - LOG_LEVEL=info
+    volumes:
+      - ${APPDIR}/flaresolverr:/config
+    ports:
+      - 8191:8191
+    restart: unless-stopped
+
+  qbittorrent:
+    image: linuxserver/qbittorrent
+    container_name: qbittorrent
+    environment:
+      - PUID=${PUID}
+      - PGID=${PGID}
+      - TZ=${TZ}
+    ports:
+      - 8080:8080
+      - 6881:6881
+      - 6881:6881/udp
+    volumes:
+      - ${APPDIR}/qbittorrent:/config
+      - ${DOWNLOADDIR}:/downloads
+    restart: unless-stopped
+
+  bazarr:
+    image: lscr.io/linuxserver/bazarr:latest
+    container_name: bazarr
+    environment:
+      - PUID=${PUID}
+      - PGID=${PGID}
+      - TZ=${TZ}
+    volumes:
+      - ${APPDIR}/bazarr:/config
+      - ${MEDIADIR}:/tank
+    ports:
+      - 6767:6767
+    restart: unless-stopped
+
+  radarr:
+    image: ghcr.io/linuxserver/radarr
+    container_name: radarr
+    environment:
+      - PUID=${PUID}
+      - PGID=${PGID}
+      - TZ=${TZ}
+    volumes:
+      - ${APPDIR}/radarr:/config
+      - ${DOWNLOADDIR}:/downloads
+      - ${MEDIADIR}:/tank
+    ports:
+      - 7878:7878
+    restart: unless-stopped
+
+  sonarr:
+    image: ghcr.io/linuxserver/sonarr
+    container_name: sonarr
+    environment:
+      - PUID=${PUID}
+      - PGID=${PGID}
+      - TZ=${TZ}
+    volumes:
+      - ${APPDIR}/sonarr:/config
+      - ${DOWNLOADDIR}:/downloads
+      - ${MEDIADIR}:/tank
+    ports:
+      - 8989:8989
+    restart: unless-stopped
+
+  lidarr:
+    image: lscr.io/linuxserver/lidarr:latest
+    container_name: lidarr
+    environment:
+      - PUID=${PUID}
+      - PGID=${PGID}
+      - TZ=${TZ}
+    volumes:
+      - ${APPDIR}/lidarr:/config
+      - ${DOWNLOADDIR}:/downloads
+      - ${MEDIADIR}/music:/music
+    ports:
+      - 8686:8686
+    restart: unless-stopped
+
+  plex:
+    container_name: plex
+    image: plexinc/pms-docker
+    network_mode: host
+    environment:
+      - PUID=${PUID}
+      - PGID=${PGID}
+      - VERSION=docker
+      - TZ=${TZ}
+      - PLEX_CLAIM=${PLEX_CLAIM}
+    volumes:
+      - ${APPDIR}/plex:/config:rw
+      - ${MEDIADIR}:/tank:ro
+    restart: unless-stopped
