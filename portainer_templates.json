@@ -2,32 +2,308 @@
   "version": "3",
   "templates": [
     {
-      "id": 1,
-      "type": 3,
-      "title": "Media Stack (Jellyfin + Arr + Plex)",
-      "name": "media-stack",
-      "description": "Deploys Jellyfin, Jellyseerr, Jellystat (+ Postgres), Prowlarr, FlareSolverr, qBittorrent, Bazarr, Radarr, Sonarr, Lidarr, and Plex using your docker-compose.yml.",
-      "note": "This template deploys a Compose stack from your GitHub repo. Ensure the host paths you provide (APPDIR, MEDIADIR, etc.) exist and that /dev/dri is available for hardware acceleration.",
-      "categories": ["Media", "Downloaders", "Automation"],
+      "id": 1001,
+      "type": 1,
+      "title": "Jellyfin",
+      "name": "jellyfin",
+      "note": "Runs Jellyfin using host networking.\n\nEnsure host paths exist:\nmkdir -p /opt/appdata/jellyfin/config\nmkdir -p /opt/appdata/jellyfin/cache\n\nNotes:\n- Uses /dev/dri for HW accel (Intel iGPU)\n- Uses /dev/shm for transcode\n- Host network means Jellyfin binds directly to host ports.",
+      "description": "Jellyfin media server.",
+      "categories": ["Media Servers"],
       "platform": "linux",
       "logo": "https://raw.githubusercontent.com/jellyfin/jellyfin-ux/master/branding/SVG/icon-transparent.svg",
-      "stackfile": "https://raw.githubusercontent.com/romeolazar/templates/main/docker-compose.yml",
+      "image": "jellyfin/jellyfin:latest",
+      "network": "host",
+      "env": [
+        { "name": "PUID", "label": "PUID", "default": "1000", "description": "UID that owns the host folders." },
+        { "name": "PGID", "label": "PGID", "default": "1000", "description": "GID that owns the host folders." },
+        { "name": "TZ", "label": "TZ", "default": "Europe/Bucharest", "description": "Timezone." }
+      ],
+      "volumes": [
+        { "container": "/config", "bind": "/opt/appdata/jellyfin/config" },
+        { "container": "/cache", "bind": "/opt/appdata/jellyfin/cache" },
+        { "container": "/transcode", "bind": "/dev/shm" },
+        { "container": "/tank", "bind": "/tank/media" },
+        { "container": "/videos", "bind": "/tank/videos" }
+      ],
+      "devices": [
+        { "host": "/dev/dri", "container": "/dev/dri" }
+      ],
+      "restart_policy": "unless-stopped"
+    },
+
+    {
+      "id": 1002,
+      "type": 1,
+      "title": "Jellyseerr",
+      "name": "jellyseerr",
+      "note": "Ensure host path exists:\nmkdir -p /opt/appdata/jellyseerr/config",
+      "description": "Jellyseerr request management for Jellyfin/Plex.",
+      "categories": ["Media"],
+      "platform": "linux",
+      "logo": "https://raw.githubusercontent.com/fallenbagel/jellyseerr/develop/public/os_logo_square.png",
+      "image": "ghcr.io/fallenbagel/jellyseerr:latest",
+      "network": "media_net",
+      "env": [
+        { "name": "TZ", "label": "TZ", "default": "Europe/Bucharest", "description": "Timezone." },
+        { "name": "LOG_LEVEL", "label": "LOG_LEVEL", "default": "info", "description": "Log level." }
+      ],
+      "ports": ["5055:5055/tcp"],
+      "volumes": [
+        { "container": "/app/config", "bind": "/opt/appdata/jellyseerr/config" }
+      ],
+      "restart_policy": "unless-stopped"
+    },
+
+    {
+      "id": 1003,
+      "type": 1,
+      "title": "Jellystat",
+      "name": "jellystat",
+      "note": "Requires Postgres. Deploy the 'Jellystat-DB (Postgres)' template first.\n\nThis template expects the database hostname 'jellystat-db' on network 'media_net'.\nCreate the network once:\ndocker network create media_net\n\nEnsure host path exists:\nmkdir -p /opt/appdata/jellystat/backup-data",
+      "description": "Jellystat analytics dashboard for Jellyfin.",
+      "categories": ["Monitoring", "Media"],
+      "platform": "linux",
+      "logo": "https://raw.githubusercontent.com/CyferShepard/Jellystat/master/frontend/public/logo192.png",
+      "image": "cyfershepard/jellystat:latest",
+      "network": "media_net",
+      "env": [
+        { "name": "POSTGRES_USER", "label": "POSTGRES_USER", "default": "jellystat", "description": "Database username." },
+        { "name": "POSTGRES_PASSWORD", "label": "POSTGRES_PASSWORD", "default": "", "description": "Database password." },
+        { "name": "POSTGRES_IP", "label": "POSTGRES_IP", "default": "jellystat-db", "description": "Database hostname (container name on media_net)." },
+        { "name": "POSTGRES_PORT", "label": "POSTGRES_PORT", "default": "5432", "description": "Database port." },
+        { "name": "JWT_SECRET", "label": "JWT_SECRET", "default": "", "description": "Set a long random secret." },
+        { "name": "TZ", "label": "TZ", "default": "Europe/Bucharest", "description": "Timezone." }
+      ],
+      "ports": ["3011:3000/tcp"],
+      "volumes": [
+        { "container": "/app/backend/backup-data", "bind": "/opt/appdata/jellystat/backup-data" }
+      ],
+      "restart_policy": "unless-stopped"
+    },
+
+    {
+      "id": 1004,
+      "type": 1,
+      "title": "Jellystat-DB (Postgres 15)",
+      "name": "jellystat-db",
+      "note": "Database for Jellystat.\n\nCreate the network once:\ndocker network create media_net\n\nEnsure host path exists:\nmkdir -p /opt/appdata/jellystat/postgres-data",
+      "description": "Postgres database used by Jellystat.",
+      "categories": ["Database"],
+      "platform": "linux",
+      "logo": "https://raw.githubusercontent.com/docker-library/docs/master/postgres/logo.png",
+      "image": "postgres:15.14",
+      "network": "media_net",
+      "env": [
+        { "name": "POSTGRES_USER", "label": "POSTGRES_USER", "default": "jellystat", "description": "Database username." },
+        { "name": "POSTGRES_PASSWORD", "label": "POSTGRES_PASSWORD", "default": "", "description": "Database password." }
+      ],
+      "volumes": [
+        { "container": "/var/lib/postgresql/data", "bind": "/opt/appdata/jellystat/postgres-data" }
+      ],
+      "restart_policy": "unless-stopped"
+    },
+
+    {
+      "id": 1005,
+      "type": 1,
+      "title": "Prowlarr (LinuxServer)",
+      "name": "prowlarr",
+      "note": "Ensure host path exists:\nmkdir -p /opt/appdata/prowlarr",
+      "description": "Indexer manager for *arr apps.",
+      "categories": ["Downloaders", "Automation"],
+      "platform": "linux",
+      "logo": "https://raw.githubusercontent.com/linuxserver/docker-templates/master/linuxserver.io/img/prowlarr-icon.png",
+      "image": "lscr.io/linuxserver/prowlarr:latest",
+      "network": "media_net",
       "env": [
         { "name": "PUID", "label": "PUID", "default": "1000" },
         { "name": "PGID", "label": "PGID", "default": "1000" },
-        { "name": "TZ", "label": "Timezone (TZ)", "default": "Europe/Bucharest" },
+        { "name": "TZ", "label": "TZ", "default": "Europe/Bucharest" }
+      ],
+      "ports": ["9696:9696/tcp"],
+      "volumes": [
+        { "container": "/config", "bind": "/opt/appdata/prowlarr" }
+      ],
+      "restart_policy": "unless-stopped"
+    },
 
-        { "name": "APPDIR", "label": "App data base path (APPDIR)", "default": "/opt/appdata" },
-        { "name": "MEDIADIR", "label": "Media path (MEDIADIR)", "default": "/tank/media" },
-        { "name": "VIDEOSDIR", "label": "Videos path (VIDEOSDIR)", "default": "/tank/videos" },
-        { "name": "DOWNLOADDIR", "label": "Downloads path (DOWNLOADDIR)", "default": "/tank/downloads" },
+    {
+      "id": 1006,
+      "type": 1,
+      "title": "FlareSolverr",
+      "name": "flaresolverr",
+      "note": "Ensure host path exists:\nmkdir -p /opt/appdata/flaresolverr",
+      "description": "Cloudflare challenge solver (used by indexers).",
+      "categories": ["Downloaders", "Automation"],
+      "platform": "linux",
+      "logo": "https://raw.githubusercontent.com/FlareSolverr/FlareSolverr/master/resources/flaresolverr_logo.png",
+      "image": "ghcr.io/flaresolverr/flaresolverr:latest",
+      "network": "media_net",
+      "env": [
+        { "name": "PUID", "label": "PUID", "default": "1000" },
+        { "name": "PGID", "label": "PGID", "default": "1000" },
+        { "name": "TZ", "label": "TZ", "default": "Europe/Bucharest" },
+        { "name": "LOG_LEVEL", "label": "LOG_LEVEL", "default": "info" }
+      ],
+      "ports": ["8191:8191/tcp"],
+      "volumes": [
+        { "container": "/config", "bind": "/opt/appdata/flaresolverr" }
+      ],
+      "restart_policy": "unless-stopped"
+    },
 
-        { "name": "JELLYSTAT_POSTGRES_USER", "label": "Jellystat Postgres user", "default": "jellystat" },
-        { "name": "JELLYSTAT_POSTGRES_PASSWORD", "label": "Jellystat Postgres password", "default": "" },
-        { "name": "JELLYSTAT_JWT_SECRET", "label": "Jellystat JWT secret", "default": "" },
+    {
+      "id": 1007,
+      "type": 1,
+      "title": "qBittorrent (LinuxServer)",
+      "name": "qbittorrent",
+      "note": "Ensure host paths exist:\nmkdir -p /opt/appdata/qbittorrent\nmkdir -p /tank/downloads",
+      "description": "qBittorrent client (LinuxServer).",
+      "categories": ["Downloaders"],
+      "platform": "linux",
+      "logo": "https://raw.githubusercontent.com/linuxserver/docker-templates/master/linuxserver.io/img/qbittorrent-icon.png",
+      "image": "lscr.io/linuxserver/qbittorrent:latest",
+      "network": "media_net",
+      "env": [
+        { "name": "PUID", "label": "PUID", "default": "1000" },
+        { "name": "PGID", "label": "PGID", "default": "1000" },
+        { "name": "TZ", "label": "TZ", "default": "Europe/Bucharest" }
+      ],
+      "ports": ["8080:8080/tcp", "6881:6881/tcp", "6881:6881/udp"],
+      "volumes": [
+        { "container": "/config", "bind": "/opt/appdata/qbittorrent" },
+        { "container": "/downloads", "bind": "/tank/downloads" }
+      ],
+      "restart_policy": "unless-stopped"
+    },
 
-        { "name": "PLEX_CLAIM", "label": "Plex claim token (optional)", "default": "" }
-      ]
+    {
+      "id": 1008,
+      "type": 1,
+      "title": "Bazarr (LinuxServer)",
+      "name": "bazarr",
+      "note": "Ensure host paths exist:\nmkdir -p /opt/appdata/bazarr\nmkdir -p /tank/media",
+      "description": "Subtitle manager.",
+      "categories": ["Media", "Automation"],
+      "platform": "linux",
+      "logo": "https://raw.githubusercontent.com/linuxserver/docker-templates/master/linuxserver.io/img/bazarr-icon.png",
+      "image": "lscr.io/linuxserver/bazarr:latest",
+      "network": "media_net",
+      "env": [
+        { "name": "PUID", "label": "PUID", "default": "1000" },
+        { "name": "PGID", "label": "PGID", "default": "1000" },
+        { "name": "TZ", "label": "TZ", "default": "Europe/Bucharest" }
+      ],
+      "ports": ["6767:6767/tcp"],
+      "volumes": [
+        { "container": "/config", "bind": "/opt/appdata/bazarr" },
+        { "container": "/tank", "bind": "/tank/media" }
+      ],
+      "restart_policy": "unless-stopped"
+    },
+
+    {
+      "id": 1009,
+      "type": 1,
+      "title": "Radarr (LinuxServer)",
+      "name": "radarr",
+      "note": "Ensure host paths exist:\nmkdir -p /opt/appdata/radarr\nmkdir -p /tank/downloads\nmkdir -p /tank/media",
+      "description": "Movie manager.",
+      "categories": ["Media", "Automation"],
+      "platform": "linux",
+      "logo": "https://raw.githubusercontent.com/linuxserver/docker-templates/master/linuxserver.io/img/radarr-icon.png",
+      "image": "ghcr.io/linuxserver/radarr:latest",
+      "network": "media_net",
+      "env": [
+        { "name": "PUID", "label": "PUID", "default": "1000" },
+        { "name": "PGID", "label": "PGID", "default": "1000" },
+        { "name": "TZ", "label": "TZ", "default": "Europe/Bucharest" }
+      ],
+      "ports": ["7878:7878/tcp"],
+      "volumes": [
+        { "container": "/config", "bind": "/opt/appdata/radarr" },
+        { "container": "/downloads", "bind": "/tank/downloads" },
+        { "container": "/tank", "bind": "/tank/media" }
+      ],
+      "restart_policy": "unless-stopped"
+    },
+
+    {
+      "id": 1010,
+      "type": 1,
+      "title": "Sonarr (LinuxServer)",
+      "name": "sonarr",
+      "note": "Ensure host paths exist:\nmkdir -p /opt/appdata/sonarr\nmkdir -p /tank/downloads\nmkdir -p /tank/media",
+      "description": "TV series manager.",
+      "categories": ["Media", "Automation"],
+      "platform": "linux",
+      "logo": "https://raw.githubusercontent.com/linuxserver/docker-templates/master/linuxserver.io/img/sonarr-icon.png",
+      "image": "ghcr.io/linuxserver/sonarr:latest",
+      "network": "media_net",
+      "env": [
+        { "name": "PUID", "label": "PUID", "default": "1000" },
+        { "name": "PGID", "label": "PGID", "default": "1000" },
+        { "name": "TZ", "label": "TZ", "default": "Europe/Bucharest" }
+      ],
+      "ports": ["8989:8989/tcp"],
+      "volumes": [
+        { "container": "/config", "bind": "/opt/appdata/sonarr" },
+        { "container": "/downloads", "bind": "/tank/downloads" },
+        { "container": "/tank", "bind": "/tank/media" }
+      ],
+      "restart_policy": "unless-stopped"
+    },
+
+    {
+      "id": 1011,
+      "type": 1,
+      "title": "Lidarr (LinuxServer)",
+      "name": "lidarr",
+      "note": "Ensure host paths exist:\nmkdir -p /opt/appdata/lidarr\nmkdir -p /tank/downloads\nmkdir -p /tank/media/music",
+      "description": "Music manager.",
+      "categories": ["Media", "Automation"],
+      "platform": "linux",
+      "logo": "https://raw.githubusercontent.com/linuxserver/docker-templates/master/linuxserver.io/img/lidarr-icon.png",
+      "image": "lscr.io/linuxserver/lidarr:latest",
+      "network": "media_net",
+      "env": [
+        { "name": "PUID", "label": "PUID", "default": "1000" },
+        { "name": "PGID", "label": "PGID", "default": "1000" },
+        { "name": "TZ", "label": "TZ", "default": "Europe/Bucharest" }
+      ],
+      "ports": ["8686:8686/tcp"],
+      "volumes": [
+        { "container": "/config", "bind": "/opt/appdata/lidarr" },
+        { "container": "/downloads", "bind": "/tank/downloads" },
+        { "container": "/music", "bind": "/tank/media/music" }
+      ],
+      "restart_policy": "unless-stopped"
+    },
+
+    {
+      "id": 1012,
+      "type": 1,
+      "title": "Plex",
+      "name": "plex",
+      "note": "Runs Plex using host networking.\n\nEnsure host path exists:\nmkdir -p /opt/appdata/plex\n\nNotes:\n- Host network means Plex binds directly to host ports\n- Set PLEX_CLAIM only for initial claim.",
+      "description": "Plex Media Server.",
+      "categories": ["Media Servers"],
+      "platform": "linux",
+      "logo": "https://raw.githubusercontent.com/linuxserver/docker-templates/master/linuxserver.io/img/plex-logo.png",
+      "image": "plexinc/pms-docker:latest",
+      "network": "host",
+      "env": [
+        { "name": "PUID", "label": "PUID", "default": "1000" },
+        { "name": "PGID", "label": "PGID", "default": "1000" },
+        { "name": "TZ", "label": "TZ", "default": "Europe/Bucharest" },
+        { "name": "VERSION", "label": "VERSION", "default": "docker" },
+        { "name": "PLEX_CLAIM", "label": "PLEX_CLAIM", "default": "", "description": "Optional. Used for initial Plex server claim." }
+      ],
+      "volumes": [
+        { "container": "/config", "bind": "/opt/appdata/plex" },
+        { "container": "/tank", "bind": "/tank/media" }
+      ],
+      "restart_policy": "unless-stopped"
     }
   ]
 }
