@@ -186,7 +186,7 @@
       "description": "Subtitle manager.",
       "categories": ["Media", "Automation"],
       "platform": "linux",
-      "logo": "https://raw.githubusercontent.com/linuxserver/docker-templates/master/linuxserver.io/img/bazarr-icon.png",
+      "logo": "https://cdn.jsdelivr.net/gh/homarr-labs/dashboard-icons/svg/bazarr.svg",
       "image": "lscr.io/linuxserver/bazarr:latest",
       "network": "media_net",
       "env": [
